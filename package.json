@@ -1,0 +1,19 @@
+{
+  "name": "nodejs-complex-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Untitled-2.js",
+  "scripts": {
+    "start": "index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.1",
+    "express-validator": "^6.14.2",
+    "mongoose": "^6.5.0",
+    "nodejs": "0.0.0",
+    "nodemon": "^2.0.19"
+  }
+}
