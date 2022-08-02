@@ -1,12 +1,14 @@
-const mongoose = require("mongoose")
+var  mongoose = require("mongoose")
 
 
-const schema = mongoose.Schema({
+var schema = mongoose.Schema({
     title : {type: String, required : true}, 
     description : {type : String, required : true},
     isbn : {type : Number, required : true},
-    user : {type : mongoose.Schema.ObjectId, required : true}, },
+    user : {type : String, required : true}, },
     {timestamps : true });
 
 
-module.exports = mongoose.model("book", schema);
+const book =  mongoose.model("dbtest", schema, "book");
+
+module.exports = {book};

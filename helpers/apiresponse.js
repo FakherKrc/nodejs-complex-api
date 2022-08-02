@@ -8,11 +8,11 @@ exports.successResponse = function(res, msg){
     return res.status(200).json(data)
 }
 
-exports.successResponseWithData = function(res, msg, data){
+exports.successResponseWithData = function(res, msg, mna){
     var data = [{
         status : 1, 
         message: msg, 
-        data : data
+        mnaa : mna
     }]
 
     return res.status(200).json(data);
@@ -22,6 +22,7 @@ exports.errorResponse = function(res, msg){
     var data = [{
         status : 0, 
         message: msg,
+        code: "error rsponse"
     }]
 
     return res.status(500).json(data);

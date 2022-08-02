@@ -1,8 +1,7 @@
-const mongoose = require("mongoose")
-const validator = require("express-validator")
-const book  = require("./models/book.js")
-
-const ApiResponse = require("./helpers/ApiReponse")
+var mongoose = require("mongoose")
+var { body,validationResult } = require("express-validator");
+var ApiResponse = require("../helpers/apiresponse")
+var {book} =  require("../models/book.js")
 
 function BookData(data) {
     this.id = data._id;
@@ -13,22 +12,18 @@ function BookData(data) {
 }
 
 exports.bookList = [
-    {
+    
         function(req, res){
             try{
-                book.find({user : req.user._id}, "_id, title, description, isbn, createAt").then(books => {
-                    if(books.length > 0){
-                        return ApiResponse.successResponseWithData(res, "Operation Success", books)
-                    }else{
-                        return ApiResponse.successResponseWithData(res, "Operation Success", []);
-                    }
-
-                })
+            
+                book.find({}, (err, docs) => {
+                    return ApiResponse.successResponseWithData(res, "Operation Success", docs)
+                });
             }catch(err){
                 return ApiResponse.errorResponse(res, err);
             }
         }
-    }
+    
 ];
 
 exports.bookStore = [
@@ -44,7 +39,7 @@ exports.bookStore = [
             })
                 
         }), 
-        sanitizeBody("*").escape(),
+        body("*").escape(),
         (req, res) =>{
             try {
 
@@ -53,15 +48,15 @@ exports.bookStore = [
                 var onebook = new book({
                     title : req.body.title, 
                     description : req.body.description, 
-                    user : req.user, 
+                    user : req.body.user, 
                     isbn : req.body.isbn
                 });
 
                 if(!errors.isEmpty())
                 {
-                    return ApiResponse.errorResponseWithData(res, "Validation error", errors.array());
+                    return ApiResponse.validationErrorWithData(res, "Validation error", errors.array());
                 }else{
-                    book.save(function(error){
+                    onebook.save(function(err){
 
                         if(err) { return ApiResponse.errorResponse(res, err); }
                         else{
@@ -75,7 +70,7 @@ exports.bookStore = [
     
             }catch(err){
 
-                return ApiResponse.ErrorResponse(res, err);
+                throw new Error(err.message);
             }
 
         }
