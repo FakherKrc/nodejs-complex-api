@@ -4,6 +4,9 @@ var ApiResponse = require("../helpers/apiresponse");
 var {auth} =  require("../models/user.js");
 var bcrypt = require("bcrypt");
 var user = require("user");
+var jwt = require("jsonwebtoken");
+require(".dotenv").config();
+
 
 UserSchema = new mongoose.Schema({
 	firstName: {type: String, required: true},
@@ -41,10 +44,10 @@ exports.register = [
             }else{
                 bcrypt.hash(req.body.password, 10, (err, hash ) => {
                     var usr = new user({
-                        firstname = req.body.firstname,
-                        lastname = req.body.lastname, 
-                        email  = req.body.email, 
-                        password = hash
+                        firstname : req.body.firstname,
+                        lastname : req.body.lastname, 
+                        email  : req.body.email, 
+                        password : hash
 
                     })
                 }).then(() => {
@@ -52,9 +55,9 @@ exports.register = [
                         if(err){return ApiResponse.errorResponse(res, "Save error")}
                         let userData = [{
                             id: user._id, 
-                            firstname = user.firstname, 
-                            lastname = user.lastname, 
-                            email = user.email
+                            firstname : user.firstname, 
+                            lastname : user.lastname, 
+                            email : user.email
                         }];
                         return ApiResponse.successResponseWithData(res, "Operation Success", userData);
                     })
@@ -69,6 +72,65 @@ exports.register = [
         
        
     }
+
+
+]
+
+
+exports.login = [
+
+    body("email").isLength({ min: 1 }).trim().withMessage("Email must be specified.")
+    .isEmail().withMessage("Email must be a valid email address.").espace(),
+body("password").isLength({ min: 1 }).trim().withMessage("Password must be specified.").espace(),
+(req, res) => {
+
+    try {
+        const error = validationResult(req);
+        if(!error.isEmpty()){
+            return ApiResponse.validationErrorWithData(res, "Error validation data", error.array())
+        }else{
+            user.findOne({email : req.body.email}).then(userfind =>
+                
+                {
+
+                    if(userfind > 0){
+                    bcrypt.compare(req.body.password, userfind.password).then(same => 
+                        {
+                            if(same){
+                                let userData = ({
+                                    id : user._id, 
+                                    firstname : user.firstname, 
+                                    lastname : user.lastname, 
+                                    email : user.email
+                                }); 
+                                
+                                const jwtPayload = userData;
+                                const jwtData = [{
+                                    expiresIn : process.env.JWT_TIMEOUT_DURATION
+
+                                }]
+
+                                const secret = process.env.JWT_SECRET;
+                                userData.token = jwt.sign(jwtPayload, secret, jwtData );
+                                return ApiResponse.successResponseWithData(res, "Operation Success", userData)
+                                
+                            }else{
+                                return ApiResponse.errorResponse(res, "Email or password wrong");
+                            }
+                        }); 
+                    }else {
+                        return ApiResponse.errorResponse(res, "Email or password wrong");
+                    }
+                });
+           
+        }
+    }catch(err){
+        throw new Error(err.message);
+    }
+
+
+}
+
 
 
 ]
