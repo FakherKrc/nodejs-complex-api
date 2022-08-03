@@ -2,6 +2,8 @@ var mongoose = require("mongoose")
 var { body,validationResult } = require("express-validator");
 var ApiResponse = require("../helpers/apiresponse")
 var {book} =  require("../models/book.js")
+var {auth} = require("../middlewares/authentificate");
+const user = require("../models/user");
 
 function BookData(data) {
     this.id = data._id;
@@ -12,11 +14,11 @@ function BookData(data) {
 }
 
 exports.bookList = [
-    
+        auth, 
         function(req, res){
             try{
             
-                book.find({}, (err, docs) => {
+                book.find({ user : req.user._id}, (err, docs) => {
                     return ApiResponse.successResponseWithData(res, "Operation Success", docs)
                 });
             }catch(err){
@@ -28,11 +30,11 @@ exports.bookList = [
 
 exports.bookStore = [
     
-        
+        auth, 
         body("title", "Title must not be empty").isLength({min : 1}).trim(),
         body("description", "Description must not be empty").isLength({min : 1}).trim(),
         body("isbn", "Isbn must not be empty").isLength({min: 1}).trim().custom(value => {
-            return book.findOne({isbn : value}).then(book => {
+            return book.findOne({isbn : value, user : req.user._id}).then(book => {
                 if(book) {
                     return Promise.reject("isbn already taken");
                 }
@@ -42,13 +44,13 @@ exports.bookStore = [
         body("*").escape(),
         (req, res) =>{
             try {
-
+                
                 const errors = validationResult(req);
 
                 var onebook = new book({
                     title : req.body.title, 
                     description : req.body.description, 
-                    user : req.body.user, 
+                    user : req.user, 
                     isbn : req.body.isbn
                 });
 
@@ -75,6 +77,111 @@ exports.bookStore = [
 
         }
        
+
+
+]
+
+exports.bookUpdate = [
+
+    auth,
+	body("title", "Title must not be empty.").isLength({ min: 1 }).trim().escape(),
+	body("description", "Description must not be empty.").isLength({ min: 1 }).trim().escape(),
+	body("isbn", "ISBN must not be empty").isLength({ min: 1 }).trim().custom((value, {req}) => {
+        book.findOne({isbn : value, user : req.user._id, _id : { "$ne": req.params.id}}).then( 
+            book =>{
+        if(book){
+            return Promise.reject("Book already exist with this ISBN no")
+        }
+
+        });
+
+        }).escape(), 
+    
+        (req, res) => {
+            try {
+                const error = validationResult(req);
+                var onebook = new Book(
+                    { title: req.body.title,
+                        description: req.body.description,
+                        isbn: req.body.isbn,
+                        _id:req.params.id
+                    });
+                if(!error.isEmpty()){
+                    return ApiResponse.validationErrorWithData(res, "Validation error", error.array())
+                }else{
+                    if(!mongoose.Types.ObjectId.isValid(req.params.id)){
+                        return ApiResponse.errorResponse(req, "Invalid ID");
+                    }
+                    else{
+
+                       book.findById(req.params.id, (err, bookfind) =>  {
+                        if(bookfind === null){
+                            return ApiResponse.errorResponse(req, "Book not find with this ID");
+                        }else{
+                            if(bookfind.user != req.user._id){
+                                return ApiResponse.errorResponse(req, "Unautorize access to this book");
+
+                            }else{
+                               
+                                book.findByIdAndUpdate(req.params.id, book, {}, error => {
+                                    if(error){
+                                        return ApiResponse.errorResponse(res, "Save error");
+                                    }else{
+                                        let bookdata = new BookData(book)
+                                        return ApiResponse.successResponseWithData(res, "Save succces", book);
+                                    }
+                                }) 
+                            }
+                        }
+                    
+                    
+                       })
+                    }
+                }
+
+
+
+            }catch (err) {
+                throw new Error(err.message);
+            }
+        }
+
+
+]
+
+
+exports.bookDelete = [
+    auth, 
+    (req, res) => { 
+        try{
+        if(!mongoose.Types.ObjectId.isValid(req.params.id)){
+            return ApiResponse.errorResponse(res, "invalid ID");
+        }else{
+            book.findOne({_id : req.params.id, user : req.user._id}).then(bookfind => {
+                if(book === null){
+                    return ApiResponse.errorResponse(res, "book not found with this ID");
+                }else{
+                    book.findByIdAndDelete(req.params.id, error => {
+                        if(error){
+                            return ApiResponse.validationErrorWithData(res, "Validation error ", error);
+                        }else{
+                            let bookData = new bookData(bookfind)
+                            return ApiResponse.successResponseWithData(res, "Success", bookData);
+                        }
+                    })
+                }
+            })
+        }
+    }catch(err){
+        throw new Error(err.message);
+    }
+        
+
+    }
+
+
+
+
 
 
 ]
